@@ -1,8 +1,9 @@
-# Simulación básica de un autómata celular 3D para anodización en Python
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import product
 import time
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import animation
 
 # --- Definición de estados ---
 M = 0   # Metal
@@ -11,13 +12,21 @@ EF = 2  # Campo eléctrico
 A = 3   # Aniones
 S = 4   # Solvente
 
+state_colors = {
+    M: 'gray',
+    OX: 'red',
+    EF: 'blue',
+    A: 'green',
+    S: 'white'
+}
+
 # --- Configuración de la rejilla ---
-Nx, Ny, Nz = 50, 50, 100  # Tamaño reducido para pruebas
+Nx, Ny, Nz = 30, 30, 30  # Tamaño reducido para visualización
 
 grid = np.full((Nx, Ny, Nz), S, dtype=np.int8)  # Iniciar con solvente
 
-# Asignar metal en la parte inferior (por ejemplo, primeros 10 planos en Z)
-grid[:, :, :10] = M
+# Asignar metal en la parte inferior
+grid[:, :, :5] = M
 
 # --- Vecindad de Moore en 3D ---
 neighbors = [offset for offset in product([-1, 0, 1], repeat=3) if offset != (0, 0, 0)]
@@ -48,28 +57,25 @@ def apply_rules():
                     rule_oxidation_by_anion(i,j,k,ni,nj,nk)
                     rule_create_field(i,j,k,ni,nj,nk)
 
-# --- Simulación temporal con medición de tiempo ---
-def simulate(steps):
-    start = time.time()
-    for t in range(steps):
-        step_start = time.time()
-        apply_rules()
-        step_end = time.time()
-        if t % 10 == 0:
-            print(f"Paso {t} completado en {step_end - step_start:.2f} segundos")
-    end = time.time()
-    print(f"\nSimulación completa en {end - start:.2f} segundos")
+# --- Crear animación 3D ---
+def animate_simulation(steps):
+    fig = plt.figure(figsize=(8,6))
+    ax = fig.add_subplot(111, projection='3d')
 
-# --- Visualización 2D ---
-def plot_slice(z):
-    plt.figure(figsize=(6,6))
-    plt.imshow(grid[:,:,z], cmap='tab10', origin='lower')
-    plt.title(f"Corte Z = {z}")
-    plt.colorbar()
+    def update(frame):
+        apply_rules()
+        ax.clear()
+        ax.set_xlim(0, Nx)
+        ax.set_ylim(0, Ny)
+        ax.set_zlim(0, Nz)
+        ax.set_title(f"Paso {frame}")
+
+        for state, color in state_colors.items():
+            x, y, z = np.where(grid == state)
+            ax.scatter(x, y, z, c=color, label=f"{state}", s=2)
+
+    anim = animation.FuncAnimation(fig, update, frames=steps, interval=300, repeat=False)
     plt.show()
 
-# --- Ejecutar simulación ---
-simulate(50)
-plot_slice(20)
-plot_slice(50)
-plot_slice(80)
+# --- Ejecutar animación ---
+animate_simulation(40)
